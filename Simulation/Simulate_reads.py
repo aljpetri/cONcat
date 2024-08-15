@@ -66,7 +66,7 @@ def simulate_reads(args, isoforms):
             continue
         read_seq = "".join([n for n in read])
         qual_seq = "".join([chr(q + 33) for q in qual])
-        reads[i_acc]=(read_seq, qual_seq)
+        reads[i_acc] = (read_seq, qual_seq)
     if is_fastq:
             for acc, (read_seq, qual_seq) in sorted(reads.items(), key=lambda x: len(x[1]), reverse=True):
                 outfile.write("@sim|err|{0}\n{1}\n{2}\n{3}\n".format(acc, read_seq, "+", qual_seq))
@@ -91,42 +91,45 @@ def mkdir_p(path):
 def read_fragments_csv_file(filename):
     fragment_dict = {}
     print("Reading the input (.csv) file")
-    with open( filename, 'r' ) as theFile:
+    with open(filename, 'r') as theFile:
         reader = csv.reader(theFile)
-        fragment_cter=0
+        fragment_cter = 0
         for line in reader:
-            fragment_dict[fragment_cter]=(line[0],line[1])
-            fragment_cter+=1
+            fragment_dict[fragment_cter] = (line[0], line[1])
+            fragment_cter += 1
             print(line)
     return fragment_dict
+
+
 def generate_reads(args):
     print("Generating the reads")
     fragments_dict = read_fragments_csv_file(args.fragments)
     print(fragments_dict)
     max_nr = len(fragments_dict.items())-1
-    isoforms_out = open(os.path.join(args.outfolder, 'clean_reads.fasta'), "w")
-    read_infos=open(os.path.join(args.outfolder,'readinfos.txt'),"w")
-    isoforms = {}
+    reads_out = open(os.path.join(args.outfolder, 'clean_reads.fasta'), "w")
+    read_infos=open(os.path.join(args.outfolder, 'readinfos.txt'), "w")
+    reads = {}
     for i in range(0, args.nr_reads):
         sequence = ''
         readinfos = []
         for j in range(0, args.nr_frags_per_read):
             fragment_id = random.randint(0, max_nr)
-            #print(fragment_id)
             sequence += fragments_dict[fragment_id][1]
             readinfos.append(fragments_dict[fragment_id][0])
-        isoforms[i] = sequence
-        isoforms_out.write(">sim|sim|{0}\n{1}\n".format(i, sequence))
+        reads[i] = sequence
+        reads_out.write(">sim|sim|{0}\n{1}\n".format(i, sequence))
         read_infos.write(">sim|sim|{0}\n{1}\n".format(i, readinfos))
 
-    return isoforms
+    return reads
+
+
 def main(args):
     mkdir_p(args.outfolder)
     print("Generating "+str(args.nr_reads)+" different reads")
     #isoforms=generate_isoforms(args, genome_out.name)
     reads = generate_reads(args)
     print("Hello World")
-    simulate_reads(args,reads)
+    simulate_reads(args, reads)
             #print("Simulating reads")
     sys.exit()
 
@@ -136,8 +139,6 @@ if __name__ == '__main__':
                         help='Path to csv file with a nucleotide sequence containing the fragments to be used for the simulation')
     parser.add_argument('--nr_reads', type=int, default=200, help='Number of reads we want to simulate')
     parser.add_argument('--outfolder', type=str, help='Outfolder.')
-    parser.add_argument('--probs', nargs='+', type=float,
-                        help='Probability for each exon to be sampled. For example, --p 1.0, 0.2, 1.0 includes first and third exon in all reads and second exon is, on average, included in 1/5 of the reads.')
     parser.add_argument('--nr_frags_per_read', type=int, default=0, help='Number of fragments we want to add to our read')
     args = parser.parse_args()
 

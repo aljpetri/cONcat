@@ -7,6 +7,7 @@ use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::path::Path;
 use bio::io::fastq;
 use edlib_rs::edlibrs::*;
+//use edlib::{align, AlignConfig, AlignmentResult};
 use itertools::Itertools;
 use rustc_hash::FxHashMap;
 use crate::side_functions::reverse_complement;
@@ -87,16 +88,21 @@ fn collect_sep_positions(sequence:&[u8], k:i32, expected_fragments_vec:&Vec<(Str
     let mut sep_positions= vec![];
     let mut config = EdlibAlignConfigRs::default();
     config.mode = EdlibAlignModeRs::EDLIB_MODE_HW;
+    config.task = EdlibAlignTaskRs::EDLIB_TASK_PATH;
     config.k = k;
     // best_alignments stores the best hits for each fragment, so we do not have to recompute every alignment
-    let mut best_alignments = vec![];
-    let mut best_dist= 1000;
+    let mut best_results = vec![];
+    let mut best_identity= 1f64;//set this to 1 for best yet
+    let mut best_len=sequence.len();
     let mut best_frag: &str = "";
     let mut longest_frag= 0;
     let mut best_start= 0;
     let mut best_end= 0;
     let mut best_frag_str= best_frag.to_string();
+    let mut best_alignment:Vec<u8>=vec![];
+    let mut best_dist= 1000;
     for fragment in expected_fragments_vec {
+
         let fragment_name = fragment.0.clone();
         //println!("Fragment: {}",fragment_name);
         let fragment_seq = fragment.1.as_bytes();
@@ -104,32 +110,56 @@ fn collect_sep_positions(sequence:&[u8], k:i32, expected_fragments_vec:&Vec<(Str
         let align_res = edlibAlignRs(fragment_seq, sequence, &config);
         if align_res.endLocations.is_some() {
             let end_locs = align_res.endLocations.unwrap();
-            //println!("endlocs {:?}", end_locs);
-            for end_loc in end_locs {
-                //TODO::From here on we need to change from best_dist to best_identity, identity = (alignment length - edit distance)/fragment_length
-                if align_res.editDistance < best_dist || align_res.editDistance == best_dist && fragment_len > longest_frag {
+            //println!("Ends: {:?}",end_locs);
+            //let mut start_locs=vec![];
+            let start_locs = align_res.startLocations.unwrap();
+            for (loc_idx,end_loc) in end_locs.iter().enumerate() {
+                let alignment_start= *start_locs.get(loc_idx).unwrap();
+                let alignment_len:usize= (end_loc - alignment_start) as usize;
+                //println!("Alignment_len {}",alignment_len);
+                //println!("Alignment from{:?} to {:?} with ED {} : {:?}",start_locs,end_loc,align_res.editDistance,align_res.alignment);
+                //let this_identity = ((alignment_len-align_res.editDistance) - fragment_len as i32).abs();
+                //Worked best yet:
+                let this_identity= align_res.editDistance as f64 / fragment_len as f64;
+                //let this_identity= fragment_len as f64/ alignment_len as f64;
+                if this_identity < min_identity && this_identity < best_identity && alignment_len < best_len{
                     best_frag = &fragment_name;
                     best_frag_str = best_frag.to_string();
-                    if end_loc as usize > fragment_len{
-                        best_start = end_loc as usize - (fragment_len - 1); //TODO: this might be a bug: we need to better grasp how long the alignment is
+                    best_dist = align_res.editDistance;
+                    best_identity = this_identity;
+                    best_len = alignment_len;
+                    best_start = alignment_start;
+                    //best_alignment = *align_res.getAlignment().unwrap();
+                    //println!("Best identity {}",best_identity);
+                    best_end = *end_loc as usize;
+                    let best_alignment_frag = (best_frag_str.clone(), best_dist, alignment_start, best_end);
+                    best_results.push(best_alignment_frag);
+                }
+
+                //TODO::From here on we need to change from best_dist to best_identity, identity = (alignment length - edit distance)/fragment_length
+                /*if align_res.editDistance < best_dist || align_res.editDistance == best_dist && fragment_len > longest_frag {
+                    best_frag = &fragment_name;
+                    best_frag_str = best_frag.to_string();
+                    if *end_loc as usize > fragment_len{
+                        best_start = *end_loc as usize - (fragment_len - 1); //TODO: this might be a bug: we need to better grasp how long the alignment is
                     }
                     else{
                         best_start = 0;
                     }
-                    best_end = end_loc as usize + 1;
+                    best_end = *end_loc as usize + 1;
                     best_dist = align_res.editDistance;
                     longest_frag = fragment_len;
-                    let best_alignment_frag = (best_frag_str.clone(), best_dist, best_start, best_end);
+                    let best_alignment_frag = (best_frag_str.clone(), best_dist, best_start as i32, best_end as i32);
                     best_alignments.push(best_alignment_frag);
-                }
+                }*/
             }
         }
     }
-    if best_dist < 1000{
+    if best_identity < 1f64{
         println!("best_fragment {}, start {}  end {} ED {}", best_frag_str, best_start, best_end, best_dist);
         println!("BFS: {}",best_frag_str);
         let best_total_pos= best_end + previous_frags;
-        let sep_pos= ( (best_start + previous_frags) as i32, (best_end + previous_frags) as i32,  best_dist, best_frag_str, longest_frag,best_total_pos);
+        let sep_pos= ( (best_start + previous_frags as i32) as i32, (best_end + previous_frags) as i32,  best_dist, best_frag_str, longest_frag,best_total_pos);
         sep_positions.push(sep_pos);
     }
     sep_positions
@@ -219,6 +249,7 @@ fn main() {
         let header_new = seq_rec.id();
         println!("{}", header_new);
         let mut sequence = seq_rec.seq();
+        println!("Sequence {:?}",std::str::from_utf8(sequence));
         let mut seq_cover_vec: Vec<Interval> = vec![];
         println!("Readlength {}", sequence.len());
         //part_frags_map maps the fragment position to the part it was found in as wee need to keep track of the parts.
@@ -299,6 +330,7 @@ fn main() {
             }
         }
         covering_vec.sort_by_key(|interval| interval.1);
+        println!("ReadID {}",header_new);
         println!("covering: {:?}", covering_vec);
         outfile_hashmap.insert(header_new.to_string(),covering_vec);
     }

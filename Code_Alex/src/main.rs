@@ -82,7 +82,7 @@ fn add_bw_frags (expected_fragments_vec: &mut Vec<(String,String)>){
 
 
 //recursive function that is used to detect the positions of the seperator in the read
-fn collect_sep_positions(sequence:&[u8], k:i32, expected_fragments_vec:&Vec<(String,String)>, short_fraglen: usize, previous_frags: usize) ->Vec<(i32,i32,i32,String,usize,usize)>{
+fn collect_sep_positions(sequence:&[u8], k:i32, expected_fragments_vec:&Vec<(String,String)>, previous_frags: usize,min_identity: f64) ->Vec<(i32,i32,i32,String,usize,usize)>{
     println!("prev_frags {}",previous_frags);
     let mut sep_positions= vec![];
     let mut config = EdlibAlignConfigRs::default();
@@ -106,11 +106,12 @@ fn collect_sep_positions(sequence:&[u8], k:i32, expected_fragments_vec:&Vec<(Str
             let end_locs = align_res.endLocations.unwrap();
             //println!("endlocs {:?}", end_locs);
             for end_loc in end_locs {
+                //TODO::From here on we need to change from best_dist to best_identity, identity = (alignment length - edit distance)/fragment_length
                 if align_res.editDistance < best_dist || align_res.editDistance == best_dist && fragment_len > longest_frag {
                     best_frag = &fragment_name;
                     best_frag_str = best_frag.to_string();
                     if end_loc as usize > fragment_len{
-                        best_start = end_loc as usize - (fragment_len - 1);
+                        best_start = end_loc as usize - (fragment_len - 1); //TODO: this might be a bug: we need to better grasp how long the alignment is
                     }
                     else{
                         best_start = 0;
@@ -190,14 +191,15 @@ fn main() {
     let mut expected_fragments_vec: Vec<(String,String)> = vec![];
     expected_fragments_vec = read_csv_to_map(expected_fragments_filename);
     add_rev_comp_frags(&mut expected_fragments_vec);
-    //add_bw_frags(&mut expected_fragments_vec);
+    add_bw_frags(&mut expected_fragments_vec);
     println!("{:?}",expected_fragments_vec);
     expected_fragments_vec.sort_by(|a, b|b.1.len().partial_cmp(&a.1.len()).expect("REASON"));
     println!("{:?}",expected_fragments_vec);
     let long_fraglen= expected_fragments_vec.first().unwrap().1.len();
     let short_fraglen= expected_fragments_vec.last().unwrap().1.len();
     let filename=cli.fastq;// "/home/alexanderpetri/Project3/Fastqs/1_first_4.fastq";
-    let k= 8;
+    let k_inter:f64 = long_fraglen as f64 * (1f64 / 1f64 - min_identity);
+    let k= k_inter.ceil() as i32;
     let mut frag_positions: Vec<(i32,i32,i32,String,usize,usize)>=vec![];
     let previous_frags: usize = 0;
     println!("fragments range from {} to {} bp length",short_fraglen,long_fraglen);
@@ -218,15 +220,14 @@ fn main() {
         println!("{}", header_new);
         let mut sequence = seq_rec.seq();
         let mut seq_cover_vec: Vec<Interval> = vec![];
-        //let mut part_hashmap=FxHashMap::default();
         println!("Readlength {}", sequence.len());
         //part_frags_map maps the fragment position to the part it was found in as wee need to keep track of the parts.
         let mut part_frags_map: FxHashMap<u64,(String, Vec<(i32,i32,i32,String,usize,usize)>)> = FxHashMap::default();
         //get the initial fragment positions
-        frag_positions = collect_sep_positions(sequence, k, &expected_fragments_vec, short_fraglen, previous_frags).clone();
+        frag_positions = collect_sep_positions(sequence, k, &expected_fragments_vec, previous_frags, min_identity).clone();
         part_frags_map.insert(0,(std::str::from_utf8(sequence).unwrap().to_string(), frag_positions.clone()));
         //TODO: How to I only split the part sequences and not the overall read sequence anymore?
-        while !frag_positions.is_empty() && it_ct < 3{
+        while !frag_positions.is_empty()  && it_ct < 3 {
             it_ct += 1;
             let mut frag_pos_to_delete= vec![];
             //iterate over the separator positions to find new separators First iteration: All coordinates are the true coordinates on the read, TODO: get correct coords for any further iterations
@@ -270,7 +271,7 @@ fn main() {
                 }
                 println!("Range from {} to {}", int_start, part.start);
                 if interlen > 5 {
-                    this_pos = collect_sep_positions(&sequence[int_start..part.start], k, &expected_fragments_vec, short_fraglen, int_start);
+                    this_pos = collect_sep_positions(&sequence[int_start..part.start], k, &expected_fragments_vec, int_start, min_identity);
                     println!("Added this pos: {:?}", this_pos);
                     if this_pos.is_empty(){
                         add_ranges.push( Interval {start: int_start,end: part.start})
@@ -286,7 +287,7 @@ fn main() {
             println!("int_start after for loop {}", int_start);
             println!("Range from {} to {}", int_start, sequence.len());
             if sequence.len() - int_start > 5{
-                this_pos = collect_sep_positions(&sequence[int_start..sequence.len()], k, &expected_fragments_vec, short_fraglen, int_start);
+                this_pos = collect_sep_positions(&sequence[int_start..sequence.len()], k, &expected_fragments_vec, int_start, min_identity);
                 if this_pos.is_empty(){
                     seq_cover_vec.push( Interval {start: int_start,end: sequence.len()})
                 }

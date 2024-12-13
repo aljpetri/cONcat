@@ -116,7 +116,7 @@ fn collect_sep_positions(sequence:&[u8], k:i32, expected_fragments_vec:&Vec<(Str
             let start_locs = align_res.startLocations.clone().unwrap();
             for (loc_idx,end_loc) in end_locs.iter().enumerate() {
                 let alignment_start= *start_locs.get(loc_idx).unwrap();
-                let alignment_len:usize= (end_loc - alignment_start) as usize;
+                let alignment_len:usize = (end_loc - alignment_start) as usize;
                 //println!("Alignment_len {}",alignment_len);
                 //println!("Alignment from{:?} to {:?} with ED {} : {:?}",start_locs,end_loc,align_res.editDistance,align_res.alignment);
                 //let this_identity = ((alignment_len-align_res.editDistance) - fragment_len as i32).abs();
@@ -138,23 +138,6 @@ fn collect_sep_positions(sequence:&[u8], k:i32, expected_fragments_vec:&Vec<(Str
                     let best_alignment_frag = (best_frag_str.clone(), best_dist, alignment_start, best_end);
                     best_results.push(best_alignment_frag);
                 }
-
-                //TODO::From here on we need to change from best_dist to best_identity, identity = (alignment length - edit distance)/fragment_length
-                /*if align_res.editDistance < best_dist || align_res.editDistance == best_dist && fragment_len > longest_frag {
-                    best_frag = &fragment_name;
-                    best_frag_str = best_frag.to_string();
-                    if *end_loc as usize > fragment_len{
-                        best_start = *end_loc as usize - (fragment_len - 1); //TODO: this might be a bug: we need to better grasp how long the alignment is
-                    }
-                    else{
-                        best_start = 0;
-                    }
-                    best_end = *end_loc as usize + 1;
-                    best_dist = align_res.editDistance;
-                    longest_frag = fragment_len;
-                    let best_alignment_frag = (best_frag_str.clone(), best_dist, best_start as i32, best_end as i32);
-                    best_alignments.push(best_alignment_frag);
-                }*/
             }
         }
     }
@@ -344,6 +327,9 @@ fn main() {
                     }
 
                     if this_pos.is_empty(){
+                        if verbose{
+                            println!("Empty Interval: {}, {}",int_start,part.start)
+                        }
                         add_ranges.push( Interval {start: int_start,end: part.start})
                     }
                     else {

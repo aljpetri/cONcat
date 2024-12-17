@@ -2,6 +2,8 @@
 
 # written by Mai Nguyen: This is a bash script to run the Python program for DNA fragment covering with multi-threads
 # altered by Alexander Petri to be usable on the Rust implementation
+
+#Run example: /usr/bin/time -v ./run_in_parallel.sh /home/alexanderpetri/Project3/Fastqs ~/LigatedDNA/Code_Alex/target/release/LigandFrags2 /home/alexanderpetri/Project3/Expected_fragments.csv /home/alexanderpetri/Project3/SimulationResults/TestAll 7
 # Check if the correct number of arguments is passed
 if [ "$#" -lt 4 ] || [ "$#" -gt 6 ]; then
     exit 1

@@ -1,6 +1,8 @@
 mod side_functions;
 mod structs;
-
+use rayon::prelude::*;
+use std::fs;
+use std::io;
 use csv::ReaderBuilder;
 use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter, Write};
@@ -38,6 +40,21 @@ fn read_csv_to_map(filename: String) -> Vec<(String, String)> {
         expected_fragments_map.push(this_tuple);
     }
     expected_fragments_map
+}
+
+
+fn write_outfile_from_vec(filename: String, outfile_vector: Vec<(String, Vec<(String, usize, usize, i32)>)>){
+    let f = File::create(filename).expect("unable to create file");
+    let mut buf_write = BufWriter::new(&f);
+    write!(buf_write ,"read_acc,fragment_id,start,stop,edit_distance,matches,fragment_length\n").expect("We should be able to write the entries");
+    for entry in outfile_vector{
+        let read_header = entry.0;
+        for fragment in entry.1{
+            write!(buf_write ,"{}, {}, {}, {}, {}\n", read_header, fragment.0, fragment.1, fragment.2, fragment.3).expect("We should be able to write the entries");
+        }
+    }
+
+    buf_write.flush().expect("Failed to flush the buffer");
 }
 fn write_outfile(filename: String, outfile_hashmap: FxHashMap<String,Vec<(String, usize, usize, i32)>>){
     let f = File::create(filename).expect("unable to create file");
@@ -234,7 +251,8 @@ fn main() {
     let mut range_end = 0;
     let mut aligned_seg;
     let mut this_pos= vec![];
-    let mut outfile_hashmap = FxHashMap::default();
+    //let mut outfile_hashmap = FxHashMap::default();
+    let mut outfile_vector =vec![];
     config.mode = EdlibAlignModeRs::EDLIB_MODE_HW;
     config.k = 8;
     //iterate over the reads in the fastq file
@@ -367,8 +385,8 @@ fn main() {
 
         }
         println!("covering: {:?}", covering_vec);
-        outfile_hashmap.insert(header_new.to_string(),covering_vec);
+        let outfile_object = (header_new.to_string(),covering_vec);
+        outfile_vector.push(outfile_object);
     }
-    write_outfile(outfilename,outfile_hashmap);
-
+    write_outfile_from_vec(outfilename,outfile_vector)
 }

@@ -118,7 +118,7 @@ def generate_reads(args):
             readinfos.append(fragments_dict[fragment_id][0])
         reads[i] = sequence
         reads_out.write(">sim|sim|{0}\n{1}\n".format(i, sequence))
-        read_infos.write(">sim|sim|{0}\n{1}\n".format(i, readinfos))
+        read_infos.write(">sim|sim|{0}: {1}\n".format(i, readinfos))
 
     return reads
 
@@ -139,7 +139,7 @@ if __name__ == '__main__':
                         help='Path to csv file with a nucleotide sequence containing the fragments to be used for the simulation')
     parser.add_argument('--nr_reads', type=int, default=200, help='Number of reads we want to simulate')
     parser.add_argument('--outfolder', type=str, help='Outfolder.')
-    parser.add_argument('--nr_frags_per_read', type=int, default=0, help='Number of fragments we want to add to our read')
+    parser.add_argument('--nr_frags_per_read', type = int, default = 10, help = 'Number of fragments we want to add to our read')
     args = parser.parse_args()
 
     if len(sys.argv) == 1:

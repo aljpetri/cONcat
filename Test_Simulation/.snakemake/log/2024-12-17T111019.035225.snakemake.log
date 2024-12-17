@@ -1,0 +1,39 @@
+Building DAG of jobs...
+File path /home/alexanderpetri/Project3/SimulationResults/Simulation_Results//simulated.fastq contains double '/'. This is likely unintended. It can also lead to inconsistent results of the file-matching approach used by Snakemake.
+File path /home/alexanderpetri/Project3/SimulationResults/Simulation_Results//simulated.fastq contains double '/'. This is likely unintended. It can also lead to inconsistent results of the file-matching approach used by Snakemake.
+Using shell: /usr/bin/bash
+Provided cores: 1 (use --cores to define parallelism)
+Rules claiming more threads will be scaled down.
+Job stats:
+job               count    min threads    max threads
+--------------  -------  -------------  -------------
+all                   1              1              1
+simulate_reads        1              1              1
+total                 2              1              1
+
+Select jobs to execute...
+
+[Tue Dec 17 11:10:19 2024]
+rule simulate_reads:
+    input: /home/alexanderpetri/Project3/Expected_fragments.csv
+    output: /home/alexanderpetri/Project3/SimulationResults/Simulation_Results//simulated.fastq
+    jobid: 1
+    reason: Missing output files: /home/alexanderpetri/Project3/SimulationResults/Simulation_Results//simulated.fastq
+    resources: tmpdir=/tmp
+
+[Tue Dec 17 11:10:20 2024]
+Finished job 1.
+1 of 2 steps (50%) done
+Select jobs to execute...
+
+[Tue Dec 17 11:10:20 2024]
+localrule all:
+    input: /home/alexanderpetri/Project3/SimulationResults/Simulation_Results//simulated.fastq
+    jobid: 0
+    reason: Input files updated by another job: /home/alexanderpetri/Project3/SimulationResults/Simulation_Results//simulated.fastq
+    resources: tmpdir=/tmp
+
+[Tue Dec 17 11:10:20 2024]
+Finished job 0.
+2 of 2 steps (100%) done
+Complete log: .snakemake/log/2024-12-17T111019.035225.snakemake.log

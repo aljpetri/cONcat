@@ -1,0 +1,7 @@
+Building DAG of jobs...
+File path /home/alexanderpetri/Project3/SimulationResults/Simulation_Results//simulated.fastq contains double '/'. This is likely unintended. It can also lead to inconsistent results of the file-matching approach used by Snakemake.
+MissingInputException in rule run_rs_implementation  in line 72 of /home/alexanderpetri/LigatedDNA/Test_Simulation/snakefile:
+Missing input files for rule run_rs_implementation:
+    output: /home/alexanderpetri/Project3/SimulationResults/Simulation_Results/rust_out
+    affected files:
+        /home/alexanderpetri/Project3/SimulationResults/Simulation_Results/simulated.fastq

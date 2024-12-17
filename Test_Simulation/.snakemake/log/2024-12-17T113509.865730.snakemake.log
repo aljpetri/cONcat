@@ -1,0 +1,65 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 1 (use --cores to define parallelism)
+Rules claiming more threads will be scaled down.
+Job stats:
+job                      count    min threads    max threads
+---------------------  -------  -------------  -------------
+all                          1              1              1
+run_py_implementation        1              1              1
+run_rs_implementation        1              1              1
+simulate_reads               1              1              1
+total                        4              1              1
+
+Select jobs to execute...
+
+[Tue Dec 17 11:35:09 2024]
+rule simulate_reads:
+    input: /home/alexanderpetri/Project3/Expected_fragments.csv
+    output: /home/alexanderpetri/Project3/SimulationResults/Simulation_Results/simulated.fastq
+    jobid: 2
+    reason: Missing output files: /home/alexanderpetri/Project3/SimulationResults/Simulation_Results/simulated.fastq
+    resources: tmpdir=/tmp
+
+[Tue Dec 17 11:35:10 2024]
+Finished job 2.
+1 of 4 steps (25%) done
+Select jobs to execute...
+
+[Tue Dec 17 11:35:10 2024]
+rule run_py_implementation:
+    input: /home/alexanderpetri/Project3/SimulationResults/Simulation_Results/simulated.fastq
+    output: /home/alexanderpetri/Project3/SimulationResults/Simulation_Results/Kristoffer_out, /home/alexanderpetri/Project3/SimulationResults/Simulation_Results/Kristoffer_aln_out, /home/alexanderpetri/Project3/SimulationResults/Simulation_Results/Kristoffer_readout
+    jobid: 3
+    reason: Missing output files: /home/alexanderpetri/Project3/SimulationResults/Simulation_Results/Kristoffer_out; Input files updated by another job: /home/alexanderpetri/Project3/SimulationResults/Simulation_Results/simulated.fastq
+    resources: tmpdir=/tmp
+
+[Tue Dec 17 11:35:28 2024]
+Finished job 3.
+2 of 4 steps (50%) done
+Select jobs to execute...
+
+[Tue Dec 17 11:35:28 2024]
+rule run_rs_implementation:
+    input: /home/alexanderpetri/Project3/SimulationResults/Simulation_Results/simulated.fastq
+    output: /home/alexanderpetri/Project3/SimulationResults/Simulation_Results/rust_out
+    jobid: 1
+    reason: Missing output files: /home/alexanderpetri/Project3/SimulationResults/Simulation_Results/rust_out; Input files updated by another job: /home/alexanderpetri/Project3/SimulationResults/Simulation_Results/simulated.fastq
+    resources: tmpdir=/tmp
+
+[Tue Dec 17 11:35:28 2024]
+Finished job 1.
+3 of 4 steps (75%) done
+Select jobs to execute...
+
+[Tue Dec 17 11:35:28 2024]
+localrule all:
+    input: /home/alexanderpetri/Project3/SimulationResults/Simulation_Results/rust_out, /home/alexanderpetri/Project3/SimulationResults/Simulation_Results/simulated.fastq, /home/alexanderpetri/Project3/SimulationResults/Simulation_Results/Kristoffer_out
+    jobid: 0
+    reason: Input files updated by another job: /home/alexanderpetri/Project3/SimulationResults/Simulation_Results/rust_out, /home/alexanderpetri/Project3/SimulationResults/Simulation_Results/Kristoffer_out, /home/alexanderpetri/Project3/SimulationResults/Simulation_Results/simulated.fastq
+    resources: tmpdir=/tmp
+
+[Tue Dec 17 11:35:28 2024]
+Finished job 0.
+4 of 4 steps (100%) done
+Complete log: .snakemake/log/2024-12-17T113509.865730.snakemake.log

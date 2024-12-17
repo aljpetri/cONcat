@@ -1,0 +1,11 @@
+{
+"DATASETS" : "ONT_original",
+  "OUTFOLDER": "/home/alexanderpetri/Project3/SimulationResults/Simulation_Results/",
+  "FRAG_CSV" : "/home/alexanderpetri/Project3/Expected_fragments.csv",
+  "FRAG_KRIS" : "/home/alexanderpetri/Project3/Expected_fragments_py.csv",
+  "NR_READS": 1000,
+  "FRAGS_PER_READ" : 10,
+  "REFERENCE" : "/proj/snic2022-6-31/nobackup/alexp/References/SIRV/SIRV_reference.fasta",
+  "original_reads" : "/proj/snic2022-6-31/nobackup/alexp/isONclust_analysis/Data/FullSIRV/ERR3588903_1.fastq",
+  "CLUSTER_OUT": "/proj/snic2022-6-31/nobackup/alexp/Results/SIRV/"
+}

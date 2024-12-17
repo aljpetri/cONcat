@@ -1,0 +1,3 @@
+KeyError in line 12 of /home/alexanderpetri/LigatedDNA/Test_Simulation/snakefile:
+'ISONFORM_LOCATION'
+  File "/home/alexanderpetri/LigatedDNA/Test_Simulation/snakefile", line 12, in <module>

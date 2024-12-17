@@ -1,0 +1,76 @@
+#Run the script by using the following: snakemake --cores 1 --configfile config.json
+#this snakemake pipeline is used to analyse the performance of isONform on Drosophila Data
+
+
+#The following variables represent the paths to the files required to run this pipeline
+
+###Script_input_folder: Equal to the folder the snakefile is located in. Should also contain all scripts needed for our analysis:
+#script_input_folder=config["SCRIPT_FOLDER"]
+fragments_csv = config["FRAG_CSV"]
+fragments_kris = config["FRAG_KRIS"]
+outfolder = config["OUTFOLDER"]
+#isonform_location=config["ISONFORM_LOCATION"]
+#isoform_abundance=config["ISO_ABUNDANCE"]
+#rattle_location=config["RATTLE_DIR"]
+shell.prefix("set -o pipefail; ")
+wildcard_constraints:
+    nr_reads="[\d]+",
+####################################################
+########## standard python functions ###############
+####################################################
+
+import re
+import os
+import errno
+import shutil
+import glob
+
+def mkdir_p(path):
+    print("creating", path)
+    try:
+        os.makedirs(path)
+    except OSError as exc:  # Python >2.5
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else:
+            raise
+
+rule all:
+	input:  outfolder + "rust_out",outfolder +"simulated.fastq",outfolder + "Kristoffer_out"
+
+
+###############################################################################################################################
+#                                                PREPROCESSING                                                                #
+###############################################################################################################################
+
+##Preprocessing:some of our tools have issues with the accessions- we shorten them here
+#rule split_accessions_orig:
+#    input: fastq = config["original_reads"]
+#    output: original_reads_split_accessions =  outfolder_root + "data/split_accs.fq"
+#
+#    run:
+#        shell("python split_accessions.py {input.fastq} {output.original_reads_split_accessions}")
+        
+        
+##Preprocessing:some of our tools have issues with the accessions- we shorten them here
+rule simulate_reads:
+    input: fragments = fragments_csv
+    output: simulated_file = outfolder +"simulated.fastq"
+
+    run:
+        shell("python ~/LigatedDNA/Simulation/Simulate_reads.py --fragments {input.fragments} --nr_reads 10 --outfolder {outfolder} --nr_frags_per_read 10")
+        
+        
+rule run_py_implementation:
+    input: simulated_file = outfolder +"simulated.fastq"
+    output: predictions = outfolder + "Kristoffer_out",
+            aln_out = outfolder + "Kristoffer_aln_out",
+            read_out = outfolder + "Kristoffer_readout"
+    run:
+        shell("python /home/alexanderpetri/DNA_fragment_covering/code/main.py {fragments_kris} {input.simulated_file} {output.predictions} {output.read_out} {output.aln_out} ")
+      
+rule run_rs_implementation:
+    input: simulated_file = outfolder +"simulated.fastq"
+    output: predictions = outfolder + "rust_out"
+    run:
+        shell("/usr/bin/time -v ~/LigatedDNA/Code_Alex/target/release/LigandFrags2 --expected {fragments_csv} --fastq {input.simulated_file} --outfile {output.predictions} --verbose") 

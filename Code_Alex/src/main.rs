@@ -182,7 +182,9 @@ struct Cli {
     #[arg(long, short, help="Path to input fastq file")]
     outfile: String,
     #[arg(long,help="print additional information")]
-    verbose: bool
+    verbose: bool,
+    #[arg(long,help="identity threshold used for the data (standard: 0.9) ")]
+    identity_threshold: Option<f64>,
     /*#[arg(short,  help="Kmer length")]
     k: Option<usize>,
     #[arg(short, help=" window size")]
@@ -204,8 +206,7 @@ struct Cli {
     //TODO:add argument telling us whether we want to use syncmers instead of kmers, maybe also add argument determining whether we want to use canonical_minimizers
     #[arg(long,help="seeding approach we choose")]
     seeding: Option<String>,
-    #[arg(long,help="quality threshold used for the data (standard: 0.9) ")]
-    quality_threshold: Option<f64>,
+
 
     #[arg(long,help="Run the post clustering step during the analysis (small improvement for results but much higher runtime)")]
     post_cluster: bool,
@@ -219,7 +220,11 @@ struct Cli {
 
 fn main() {
     let cli = Cli::parse();
-    let min_identity= 0.75;
+    let mut min_identity= 0.75;
+    if cli.identity_threshold.is_some(){
+        min_identity = cli.identity_threshold.unwrap();
+    }
+    println!("Min identity: {}",min_identity);
     let outfilename= cli.outfile;// ="/home/alexanderpetri/Project3/SimulationResults/first4_fastqs/Alex/outfile";
     let expected_fragments_filename= cli.expected;//"/home/alexanderpetri/Project3/Expected_fragments.csv";
     let verbose=cli.verbose;

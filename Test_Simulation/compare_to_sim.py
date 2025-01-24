@@ -26,13 +26,13 @@ def read_sim_infos(filename):
                     continue
 
                 # Split key and value part at the first ':'
-                key_part, value_part = line.split(':', 1)
+                key_part, frag_list = line.split(':', 1)
 
                 # Remove the leading '>' and strip whitespace
                 key = key_part[1:].strip().split("|")[-1]
 
                 # Parse the list of items (assumes it's well-formed)
-                value = eval(value_part.strip())  # Using eval to parse the list safely
+                value = eval(frag_list.strip())  # Using eval to parse the list safely
 
                 # Store in the dictionary
                 result[key] = value
@@ -66,11 +66,12 @@ def parse_python_result(file_path):
             parts = line.split(',')
             read_acc = parts[0].split("|")[-1]
             fragment_id = parts[1]
-
+            startpos =parts[2]
+            endpos = parts[3]
             # Append fragment_id to the corresponding read_acc list
             if read_acc not in result:
                 result[read_acc] = []
-            result[read_acc].append(fragment_id)
+            result[read_acc].append((fragment_id,startpos,endpos))
 
     return result
 
@@ -106,11 +107,12 @@ def parse_rs_results(file_path):
             # Clean up and extract fields
             read_acc = parts[0].strip().split("|")[-1]
             fragment_id = parts[1].strip()
-
+            startpos = parts[2]
+            endpos = parts[3]
             # Add the fragment_id to the corresponding read accession
             if read_acc not in fragments_dict:
                 fragments_dict[read_acc] = []
-            fragments_dict[read_acc].append(fragment_id)
+            fragments_dict[read_acc].append((fragment_id,startpos,endpos))
 
     return fragments_dict
 
@@ -132,25 +134,33 @@ def compare_fragment_dicts(reference_dict, tested_dict):
     """
     comparison_results = {}
     #shared_accessions = set(dict1.keys()) & set(dict2.keys())
-
+    preserved_cter: int = 0
     for read_acc in reference_dict.keys():
-        print("Tested_dict",tested_dict)
-        list1 = reference_dict[read_acc]
-        list2 = tested_dict[read_acc]
-
+        #print("Tested_dict",tested_dict)
+        list_of_ref_infos = reference_dict[read_acc]
+        list1 = [elem[0] for elem in list_of_ref_infos]
+        list_of_test_infos = tested_dict[read_acc]
+        list2 = [elem[0] for elem in list_of_test_infos]
         # Calculate the set of shared fragments
         set1, set2 = set(list1), set(list2)
         shared_fragments = set1 & set2
-        total_fragments = len(set1 | set2)  # Union of both sets
-
+        total_fragments = len(list1)  # Union of both sets
+        print(shared_fragments)
+        print(total_fragments)
         # Calculate shared fragments' proportion
         shared_rate = len(shared_fragments) / total_fragments if total_fragments > 0 else 0
-
+        #if shared_rate == 1.0:
+            #preserved_cter += 1
         # Check if the shared fragments appear in the same order
         shared_in_order = [f for f in list1 if f in shared_fragments]
         shared_in_order_other = [f for f in list2 if f in shared_fragments]
-        order_preserved = shared_in_order == shared_in_order_other
-
+        if shared_in_order == shared_in_order_other:
+            #preserved_cter += 1
+            order_preserved = True
+            shared_rate = 1.0
+            preserved_cter += 1
+        else:
+            order_preserved = False
         # Store results for the current read accession
         comparison_results[read_acc] = {
             'fragments_1': list1,
@@ -161,7 +171,7 @@ def compare_fragment_dicts(reference_dict, tested_dict):
         }
 
     # Calculate overall shared rate across all accessions
-    overall_shared_rates = [
+    overall_shared_rates=[
         result['shared_rate'] for result in comparison_results.values()
     ]
     overall_rate = sum(overall_shared_rates) / len(overall_shared_rates) if overall_shared_rates else 0
@@ -170,6 +180,7 @@ def compare_fragment_dicts(reference_dict, tested_dict):
     summary = {
         'overall_shared_rate': round(overall_rate, 2),
         #'read_accessions_compared': len(shared_accessions),
+        'fully_preserved_reads':preserved_cter,
         'comparison_details': comparison_results,
     }
 
@@ -180,12 +191,13 @@ def main(args):
     sim_info_dict = read_sim_infos(args.read_infos)
     py_result_dict = parse_python_result(args.py_results)
     rs_result_dict = parse_rs_results(args.rs_results)
-    print(sim_info_dict)
-    print(py_result_dict)
-    print(rs_result_dict)
-
+    #print(sim_info_dict)
+    #print(py_result_dict)
+    #print(rs_result_dict)
+    #comparison_python={}
     comparison_python = compare_fragment_dicts(sim_info_dict, py_result_dict)
     comparison_rust = compare_fragment_dicts(sim_info_dict, rs_result_dict)
+    #print(comparison_rust)
     outfile = open(args.outfile, "w")
     outfile.write("Python:\n")
 
@@ -197,6 +209,7 @@ def main(args):
         print(f"  Shared Rate: {details['shared_rate']}")
         print(f"  Order Preserved: {details['order_preserved']}")
         outfile.write("Read Accession: {0}\nShared Fragments: {1}\nShared Rate: {2}\n Order Preserved: {3}\n".format(read_acc, details['shared_fragments'], details['shared_rate'], details['order_preserved']))
+    print("\n # reads fully preserved:", comparison_python['fully_preserved_reads'])
     print("\nOverall Shared Rate:", comparison_python['overall_shared_rate'])
     outfile.write("Overall Shared Rate:{0}\n".format( comparison_python['overall_shared_rate']))
     print("\nComparison with Rust results")
@@ -207,13 +220,16 @@ def main(args):
         print(f"  Shared Rate: {details['shared_rate']}")
         print(f"  Order Preserved: {details['order_preserved']}")
         outfile.write(
-            "Read Accession: {0}\nShared Fragments: {1}\nShared Rate: {2}\n Order Preserved: {3}\n".format(read_acc,
+            "Read Accession: {0}\nShared Fragments: {1}\nOriginal: {2}\nOther: {3}\nShared Rate: {4}\n Order Preserved: {5}\n".format(read_acc,
                                                                                                          details[
                                                                                                              'shared_fragments'],
+                                                                                                         details['fragments_1'],
+                                                                                                         details['fragments_2'],
                                                                                                          details[
                                                                                                              'shared_rate'],
                                                                                                          details[
                                                                                                              'order_preserved']))
+    print("\n # reads fully preserved:", comparison_rust['fully_preserved_reads'])
     print("\nOverall Shared Rate:", comparison_rust['overall_shared_rate'])
     outfile.write("Overall Shared Rate:{0}\n".format( comparison_python['overall_shared_rate']))
     #print("Generating "+str(args.nr_reads)+" different reads")

@@ -1,8 +1,6 @@
 mod side_functions;
 mod structs;
 use rayon::prelude::*;
-use std::fs;
-use std::io;
 use csv::ReaderBuilder;
 use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter, Write};
@@ -111,20 +109,20 @@ fn collect_sep_positions(sequence:&[u8], k:i32, expected_fragments_vec:&Vec<(Str
     config.k = k;
     // best_alignments stores the best hits for each fragment, so we do not have to recompute every alignment
     let mut best_results = vec![];
-    let mut best_identity= 0f64;//set this to 1 for best yet
+    let mut best_identity= 0f64;
     let mut best_len= sequence.len();
     let mut best_frag: &str = "";
     let mut longest_frag= 0;
     let mut best_start= 0;
     let mut best_end= 0;
     let mut best_frag_str= best_frag.to_string();
-    let mut best_alignment:Vec<u8> = vec![];
+    let mut best_alignment: Vec<u8> = vec![];
     let mut best_dist= 1000;
+    //for all fragments use edlib and get the best
     for fragment in expected_fragments_vec {
         let fragment_name = fragment.0.clone();
-        //println!("Fragment: {}",fragment_name);
+        println!("Fragment: {}",fragment_name);
         let fragment_seq = fragment.1.as_bytes();
-        let fragment_len = fragment_seq.len();
         let align_res = edlibAlignRs(fragment_seq, sequence, &config);
         if align_res.endLocations.is_some() {
             let end_locs = align_res.endLocations.clone().unwrap();
@@ -134,15 +132,9 @@ fn collect_sep_positions(sequence:&[u8], k:i32, expected_fragments_vec:&Vec<(Str
             for (loc_idx,end_loc) in end_locs.iter().enumerate() {
                 let alignment_start= *start_locs.get(loc_idx).unwrap();
                 let alignment_len:usize = (end_loc - alignment_start) as usize;
-                //println!("Alignment_len {}",alignment_len);
-                //println!("Alignment from{:?} to {:?} with ED {} : {:?}",start_locs,end_loc,align_res.editDistance,align_res.alignment);
-                //let this_identity = ((alignment_len-align_res.editDistance) - fragment_len as i32).abs();
-                //Worked best yet:
-                //let this_identity= align_res.editDistance as f64 / fragment_len as f64;
                 let this_identity= (alignment_len as i32 - align_res.editDistance) as f64/ alignment_len as f64;
-                //let this_identity= fragment_len as f64/ alignment_len as f64;
-                //if this_identity < min_identity && this_identity < best_identity && alignment_len < best_len{
-                if this_identity > min_identity && this_identity >best_identity{
+                println!("identity: {}, startpos {}, endpos {}",this_identity,alignment_start,end_loc);
+                if this_identity > min_identity && this_identity > best_identity{
                     best_frag = &fragment_name;
                     best_frag_str = best_frag.to_string();
                     best_dist = align_res.editDistance;
@@ -294,13 +286,13 @@ fn main() {
 
 
                 range_end = endpos + 1;
-
+                //get the sequence and length of the bases located between two detected fragments
                 let sub_range_seq = &sequence[prev_end..range_start];
                 let sub_range_len = sub_range_seq.len();
                 if verbose{
                     println!("Frag start: {}, frag end {} , edit distance {}, frag {}", range_start, range_end, edit_dist, frag_name);
                 }
-
+                //add the fragment information to our final data structure covering_vec
                 covering_vec.push((frag_name, range_start, range_end, edit_dist));
                 if verbose{
 

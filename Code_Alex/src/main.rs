@@ -1,10 +1,12 @@
 mod side_functions;
 mod structs;
+
+use std::fs;
 use rayon::prelude::*;
 use csv::ReaderBuilder;
 use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use bio::io::fastq;
 use edlib_rs::edlibrs::*;
 use itertools::Itertools;
@@ -41,27 +43,49 @@ fn read_csv_to_map(filename: String) -> Vec<(String, String)> {
 }
 
 
-fn write_outfile_from_vec(filename: String, outfile_vector: Vec<(String, Vec<(String, usize, usize, i32)>)>){
-    let f = File::create(filename).expect("unable to create file");
+fn write_outfile_from_vec(outfolder: &str, outfile_vector: Vec<(String, Vec<(String, usize, usize, i32)>)>, id_len_map: FxHashMap<String,usize>){
+    fs::create_dir_all(outfolder).expect("The outfolder does not exist");
+    let mut main_name = PathBuf::from(outfolder);
+    let mut other_name = PathBuf::from(outfolder);
+    main_name.push("fragments.txt");
+    other_name.push("covering.txt");
+    let f = File::create(main_name).expect("unable to create file");
+    let f2 =File::create(other_name).expect("unable to create file");
     let mut buf_write = BufWriter::new(&f);
-    write!(buf_write ,"read_acc,fragment_id,start,stop,edit_distance,matches,fragment_length\n").expect("We should be able to write the entries");
+    let mut buf_write2 = BufWriter::new(&f2);
+
+
+    write!(buf_write ,"read_acc,fragment_id,start,stop,edit_distance\n").expect("We should be able to write the entries");
+    write!(buf_write2,"read_acc, length, #covered, %coverage\n").expect("We should be able to write the entries");
     for entry in outfile_vector{
+        let mut bases_covered= 0;
         let read_header = entry.0;
         for fragment in entry.1{
+            bases_covered = bases_covered + (fragment.2-fragment.1);
             write!(buf_write ,"{}, {}, {}, {}, {}\n", read_header, fragment.0, fragment.1, fragment.2, fragment.3).expect("We should be able to write the entries");
+
+
         }
+        let readlen= id_len_map.get(read_header.as_str()).unwrap();
+        write!(buf_write2,"{}, {}, {}, {}\n",read_header,readlen,bases_covered, (bases_covered as f64/ *readlen as f64) * 100_f64 ).expect("REASON")
     }
 
     buf_write.flush().expect("Failed to flush the buffer");
 }
 fn write_outfile(filename: String, outfile_hashmap: FxHashMap<String,Vec<(String, usize, usize, i32)>>){
+
     let f = File::create(filename).expect("unable to create file");
+
     let mut buf_write = BufWriter::new(&f);
+
     write!(buf_write ,"read_acc,fragment_id,start,stop,edit_distance,matches,fragment_length\n").expect("We should be able to write the entries");
+
     for entry in outfile_hashmap{
-        let read_header=entry.0;
+        let read_header= entry.0;
         for fragment in entry.1{
+
             write!(buf_write ,"{}, {}, {}, {}, {}\n", read_header, fragment.0, fragment.1, fragment.2, fragment.3).expect("We should be able to write the entries");
+
         }
     }
 
@@ -172,7 +196,7 @@ struct Cli {
     #[arg(long, short, help="Path to input fastq file")]
     fastq: String,
     #[arg(long, short, help="Path to input fastq file")]
-    outfile: String,
+    outfolder: String,
     #[arg(long,help="print additional information")]
     verbose: bool,
     #[arg(long,help="identity threshold used for the data (standard: 0.9) ")]
@@ -217,12 +241,12 @@ fn main() {
         min_identity = cli.identity_threshold.unwrap();
     }
     println!("Min identity: {}",min_identity);
-    let outfilename= cli.outfile;// ="/home/alexanderpetri/Project3/SimulationResults/first4_fastqs/Alex/outfile";
+    let outfolder= cli.outfolder;// ="/home/alexanderpetri/Project3/SimulationResults/first4_fastqs/Alex/outfile";
     let expected_fragments_filename= cli.expected;//"/home/alexanderpetri/Project3/Expected_fragments.csv";
     let verbose=cli.verbose;
     let mut expected_fragments_vec: Vec<(String,String)> = vec![];
     expected_fragments_vec = read_csv_to_map(expected_fragments_filename);
-    add_rev_comp_frags(&mut expected_fragments_vec);
+    add_rev_comp_frags(&mut expected_fragments_vec); //comment this line out for current expected_fragments.csv
     //add_bw_frags(&mut expected_fragments_vec);
     if verbose{
         println!("{:?}",expected_fragments_vec);
@@ -234,7 +258,7 @@ fn main() {
     }
     let long_fraglen= expected_fragments_vec.first().unwrap().1.len();
     let short_fraglen= expected_fragments_vec.last().unwrap().1.len();
-    let filename=cli.fastq;// "/home/alexanderpetri/Project3/Fastqs/1_first_4.fastq";
+    let filename= cli.fastq;// "/home/alexanderpetri/Project3/Fastqs/1_first_4.fastq";
     let k_inter:f64 = long_fraglen as f64 * (1f64 / 1f64 - min_identity);
     let k= k_inter.ceil() as i32;
     let mut frag_positions: Vec<(i32,i32,i32,String,usize,usize)>=vec![];
@@ -251,7 +275,8 @@ fn main() {
     //let mut outfile_hashmap = FxHashMap::default();
     let mut outfile_vector =vec![];
     config.mode = EdlibAlignModeRs::EDLIB_MODE_HW;
-    config.k = 8;
+    config.k = k;
+    let mut lendict=FxHashMap::default();
     //iterate over the reads in the fastq file
     for record in reader.records() {
         let mut covering_vec = vec![];
@@ -262,6 +287,7 @@ fn main() {
         let mut sequence = seq_rec.seq();
 
         let mut seq_cover_vec: Vec<Interval> = vec![];
+        lendict.insert(header_new.to_string(), sequence.len());
         if verbose{
             println!("{}", header_new);
             println!("Readlength {}", sequence.len());
@@ -385,5 +411,5 @@ fn main() {
         let outfile_object = (header_new.to_string(),covering_vec);
         outfile_vector.push(outfile_object);
     }
-    write_outfile_from_vec(outfilename,outfile_vector)
+    write_outfile_from_vec(&outfolder, outfile_vector,lendict)
 }

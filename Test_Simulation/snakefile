@@ -36,7 +36,7 @@ def mkdir_p(path):
             raise
 
 rule all:
-	input:  outfolder +"analysis_out.txt",outfolder + "rust_out",outfolder +"simulated.fastq",outfolder + "Kristoffer_out"
+	input:  outfolder +"analysis_out.txt",outfolder +"simulated.fastq",outfolder + "Kristoffer_out"
 
 
 ###############################################################################################################################
@@ -72,12 +72,12 @@ rule run_py_implementation:
       
 rule run_rs_implementation:
     input: simulated_file = outfolder +"simulated.fastq"
-    output: predictions = outfolder + "rust_out"
+    output: predictions = outfolder + "fragments.txt"
     run:
-        shell("/usr/bin/time -v ~/LigatedDNA/Code_Alex/target/release/LigandFrags2 --expected {fragments_csv} --fastq {input.simulated_file} --outfile {output.predictions} --verbose --identity-threshold 0.5") 
+        shell("/usr/bin/time -v ~/LigatedDNA/Code_Alex/target/release/LigandFrags2 --expected {fragments_csv} --fastq {input.simulated_file} --outfolder {outfolder} --verbose --identity-threshold 0.5") 
         
 rule compare_to_ground_truth:
-    input: rust_result = outfolder + "rust_out",
+    input: rust_result = outfolder + "fragments.txt",
            py_result = outfolder + "Kristoffer_out",
            ground_truth = outfolder +"readinfos.txt"
     output: 

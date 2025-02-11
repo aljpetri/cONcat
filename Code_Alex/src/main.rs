@@ -145,7 +145,10 @@ fn collect_sep_positions(sequence:&[u8], k:i32, expected_fragments_vec:&Vec<(Str
     //for all fragments use edlib and get the best
     for fragment in expected_fragments_vec {
         let fragment_name = fragment.0.clone();
-        println!("Fragment: {}",fragment_name);
+        if verbose{
+            println!("Fragment: {}",fragment_name);
+        }
+
         let fragment_seq = fragment.1.as_bytes();
         let align_res = edlibAlignRs(fragment_seq, sequence, &config);
         if align_res.endLocations.is_some() {
@@ -157,7 +160,11 @@ fn collect_sep_positions(sequence:&[u8], k:i32, expected_fragments_vec:&Vec<(Str
                 let alignment_start= *start_locs.get(loc_idx).unwrap();
                 let alignment_len:usize = (end_loc - alignment_start) as usize;
                 let this_identity= (alignment_len as i32 - align_res.editDistance) as f64/ alignment_len as f64;
-                println!("identity: {}, startpos {}, endpos {}",this_identity,alignment_start,end_loc);
+
+                if verbose{
+                    println!("identity: {}, startpos {}, endpos {}",this_identity,alignment_start,end_loc);
+                }
+
                 if this_identity > min_identity && this_identity > best_identity{
                     best_frag = &fragment_name;
                     best_frag_str = best_frag.to_string();
@@ -175,8 +182,11 @@ fn collect_sep_positions(sequence:&[u8], k:i32, expected_fragments_vec:&Vec<(Str
         }
     }
     if best_identity > 0f64{
-        println!("best_fragment {}, start {}  end {} ED {}", best_frag_str, best_start, best_end, best_dist);
-        println!("BFS: {}",best_frag_str);
+        if verbose{
+            println!("best_fragment {}, start {}  end {} ED {}", best_frag_str, best_start, best_end, best_dist);
+            println!("BFS: {}",best_frag_str);
+        }
+
         let best_total_pos= best_end + previous_frags;
         let sep_pos= ( (best_start + previous_frags as i32) as i32, (best_end + previous_frags) as i32,  best_dist, best_frag_str, longest_frag,best_total_pos);
         sep_positions.push(sep_pos);
@@ -246,7 +256,7 @@ fn main() {
     let verbose=cli.verbose;
     let mut expected_fragments_vec: Vec<(String,String)> = vec![];
     expected_fragments_vec = read_csv_to_map(expected_fragments_filename);
-    add_rev_comp_frags(&mut expected_fragments_vec); //comment this line out for current expected_fragments.csv
+    //add_rev_comp_frags(&mut expected_fragments_vec); //comment this line out for current expected_fragments.csv
     //add_bw_frags(&mut expected_fragments_vec);
     if verbose{
         println!("{:?}",expected_fragments_vec);
@@ -405,9 +415,9 @@ fn main() {
         covering_vec.sort_by_key(|interval| interval.1);
         if verbose{
             println!("ReadID {}",header_new);
-
+            println!("covering: {:?}", covering_vec);
         }
-        println!("covering: {:?}", covering_vec);
+
         let outfile_object = (header_new.to_string(),covering_vec);
         outfile_vector.push(outfile_object);
     }

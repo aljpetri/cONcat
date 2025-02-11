@@ -1,6 +1,6 @@
 {
 "DATASETS" : "ONT_original",
-  "OUTFOLDER": "/home/alexanderpetri/Project3/SimulationResults/error_free_2/",
+  "OUTFOLDER": "/home/alexanderpetri/Project3/SimulationResults/0-75_15/",
   "FRAG_CSV" : "/home/alexanderpetri/Project3/Expected_fragments.csv",
   "FRAG_KRIS" : "/home/alexanderpetri/Project3/Expected_fragments_py.csv",
   "NR_READS": 1000,

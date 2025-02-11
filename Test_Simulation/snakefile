@@ -36,7 +36,7 @@ def mkdir_p(path):
             raise
 
 rule all:
-	input:  outfolder +"analysis_out.txt",outfolder +"simulated.fastq",outfolder + "Kristoffer_out"
+	input:  outfolder +"analysis_out.txt",outfolder +"simulated.fastq"#,outfolder + "Kristoffer_out"
 
 
 ###############################################################################################################################
@@ -59,31 +59,31 @@ rule simulate_reads:
             read_infos = outfolder +"readinfos.txt"
 
     run:
-        shell("python ~/LigatedDNA/Simulation/Simulate_reads.py --fragments {input.fragments} --nr_reads 100 --outfolder {outfolder} --nr_frags_per_read 10")
+        shell("python ~/LigatedDNA/Simulation/Simulate_reads.py --fragments {input.fragments} --nr_reads 1000 --outfolder {outfolder} --nr_frags_per_read 10")
         
         
-rule run_py_implementation:
-    input: simulated_file = outfolder +"simulated.fastq"
-    output: predictions = outfolder + "Kristoffer_out",
-            aln_out = outfolder + "Kristoffer_aln_out",
-            read_out = outfolder + "Kristoffer_readout"
-    run:
-        shell("python /home/alexanderpetri/DNA_fragment_covering/code/main.py {fragments_kris} {input.simulated_file} {output.predictions} {output.read_out} {output.aln_out} ")
+#rule run_py_implementation:
+#    input: simulated_file = outfolder +"simulated.fastq"
+#    output: predictions = outfolder + "Kristoffer_out",
+#            aln_out = outfolder + "Kristoffer_aln_out",
+#            read_out = outfolder + "Kristoffer_readout"
+#    run:
+#        shell("python /home/alexanderpetri/DNA_fragment_covering/code/main.py {fragments_kris} {input.simulated_file} {output.predictions} {output.read_out} {output.aln_out} ")
       
 rule run_rs_implementation:
     input: simulated_file = outfolder +"simulated.fastq"
     output: predictions = outfolder + "fragments.txt"
     run:
-        shell("/usr/bin/time -v ~/LigatedDNA/Code_Alex/target/release/LigandFrags2 --expected {fragments_csv} --fastq {input.simulated_file} --outfolder {outfolder} --verbose --identity-threshold 0.5") 
+        shell("/usr/bin/time -v ~/LigatedDNA/Code_Alex/target/release/LigandFrags2 --expected {fragments_csv} --fastq {input.simulated_file} --outfolder {outfolder}  --identity-threshold 0.75") 
         
 rule compare_to_ground_truth:
     input: rust_result = outfolder + "fragments.txt",
-           py_result = outfolder + "Kristoffer_out",
+           #py_result = outfolder + "Kristoffer_out",
            ground_truth = outfolder +"readinfos.txt"
     output: 
         outfolder +"analysis_out.txt"
     run: 
-         shell("python compare_to_sim.py --read_infos {input.ground_truth} --py_results {input.py_result} --rs_results {input.rust_result} --outfile {output}")
+         shell("python compare_to_sim.py --read_infos {input.ground_truth}  --rs_results {input.rust_result} --outfile {output}")
 
         
 

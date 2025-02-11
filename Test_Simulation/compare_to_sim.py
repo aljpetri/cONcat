@@ -74,7 +74,43 @@ def parse_python_result(file_path):
             result[read_acc].append((fragment_id,startpos,endpos))
 
     return result
+    
+    
+def get_missing_fragments_ordered(dict1, dict2):
+    """
+    Finds all fragments that were present in dict1 but not in dict2,
+    preserving order and handling cases where dict2 contains (fragment_id, start, stop) tuples.
 
+    Args:
+        dict1 (dict): The reference dictionary (baseline), containing lists of fragment IDs.
+        dict2 (dict): The dictionary to compare against, containing lists of (fragment_id, start, stop) tuples.
+
+    Returns:
+        dict: A dictionary with read accessions as keys and missing fragments (in order) as values.
+    """
+    # Convert dict2 values from tuples to lists of fragment IDs
+    dict2_processed = {key: [frag[0] for frag in value] for key, value in dict2.items()}
+
+    # Now find the shared accessions based on the processed dict2
+    shared_accessions = set(dict1.keys()) & set(dict2_processed.keys())
+
+    missing_fragments = {}
+
+    for read_acc in shared_accessions:
+        list1 = [frag[0] for frag in dict1[read_acc]]
+        list2 = [frag[0] for frag in dict2[read_acc]]  # Copy lists to avoid modifying originals
+        print("L1: {} \nL2:{}".format(list1,list2))
+        missing = []
+        for fragment in list1:
+            if fragment in list2:
+                list2.remove(fragment)  # Remove first occurrence to respect repetition
+            else:
+                missing.append(fragment)  # If not in list2, it's missing
+        print("Missing {}\n".format(missing))
+        if missing:
+            missing_fragments[int(read_acc)] = missing  # Store ordered missing elements
+    
+    return missing_fragments
 
 def parse_rs_results(file_path):
     """
@@ -145,8 +181,8 @@ def compare_fragment_dicts(reference_dict, tested_dict):
         set1, set2 = set(list1), set(list2)
         shared_fragments = set1 & set2
         total_fragments = len(list1)  # Union of both sets
-        print(shared_fragments)
-        print(total_fragments)
+        #print(shared_fragments)
+        #print(total_fragments)
         # Calculate shared fragments' proportion
         shared_rate = len(shared_fragments) / total_fragments if total_fragments > 0 else 0
         #if shared_rate == 1.0:
@@ -154,6 +190,7 @@ def compare_fragment_dicts(reference_dict, tested_dict):
         # Check if the shared fragments appear in the same order
         shared_in_order = [f for f in list1 if f in shared_fragments]
         shared_in_order_other = [f for f in list2 if f in shared_fragments]
+        list_of_undetected=[]
         if shared_in_order == shared_in_order_other:
             #preserved_cter += 1
             order_preserved = True
@@ -161,6 +198,7 @@ def compare_fragment_dicts(reference_dict, tested_dict):
             preserved_cter += 1
         else:
             order_preserved = False
+            list_of_undetected.append(set1-set2)
         # Store results for the current read accession
         comparison_results[read_acc] = {
             'fragments_1': list1,
@@ -168,6 +206,7 @@ def compare_fragment_dicts(reference_dict, tested_dict):
             'shared_fragments': list(shared_fragments),
             'shared_rate': round(shared_rate, 2),
             'order_preserved': order_preserved,
+            'undetected' : list_of_undetected,
         }
 
     # Calculate overall shared rate across all accessions
@@ -189,38 +228,32 @@ def compare_fragment_dicts(reference_dict, tested_dict):
 
 def main(args):
     sim_info_dict = read_sim_infos(args.read_infos)
-    py_result_dict = parse_python_result(args.py_results)
+    #py_result_dict = parse_python_result(args.py_results)
     rs_result_dict = parse_rs_results(args.rs_results)
     #print(sim_info_dict)
     #print(py_result_dict)
     #print(rs_result_dict)
     #comparison_python={}
-    comparison_python = compare_fragment_dicts(sim_info_dict, py_result_dict)
+    #comparison_python = compare_fragment_dicts(sim_info_dict, py_result_dict)
     comparison_rust = compare_fragment_dicts(sim_info_dict, rs_result_dict)
-    #print(comparison_rust)
+    missing_frags = get_missing_fragments_ordered(sim_info_dict, rs_result_dict)
+    print("Missing:")
+    print(missing_frags)
     outfile = open(args.outfile, "w")
-    outfile.write("Python:\n")
-
-    # Print comparison summaries
-    print("Comparison with Python results:")
-    for read_acc, details in comparison_python['comparison_details'].items():
-        print(f"\nRead Accession: {read_acc}")
-        print(f"  Shared Fragments: {details['shared_fragments']}")
-        print(f"  Shared Rate: {details['shared_rate']}")
-        print(f"  Order Preserved: {details['order_preserved']}")
-        outfile.write("Read Accession: {0}\nShared Fragments: {1}\nShared Rate: {2}\n Order Preserved: {3}\n".format(read_acc, details['shared_fragments'], details['shared_rate'], details['order_preserved']))
-    print("\n # reads fully preserved:", comparison_python['fully_preserved_reads'])
-    print("\nOverall Shared Rate:", comparison_python['overall_shared_rate'])
-    outfile.write("Overall Shared Rate:{0}\n".format( comparison_python['overall_shared_rate']))
+    print("Comp_rust {}".format(comparison_rust))
     print("\nComparison with Rust results")
     outfile.write("Rust:\n")
     for read_acc, details in comparison_rust['comparison_details'].items():
-        print(f"\nRead Accession: {read_acc}")
-        print(f"  Shared Fragments: {details['shared_fragments']}")
-        print(f"  Shared Rate: {details['shared_rate']}")
-        print(f"  Order Preserved: {details['order_preserved']}")
+        if int(read_acc) in missing_frags.keys():
+    	    missing_frag = missing_frags[int(read_acc)] 
+        else:
+    	    missing_frag={}
+        #print(f"\nRead Accession: {read_acc}")
+        #print(f"  Shared Fragments: {details['shared_fragments']}")
+        #print(f"  Shared Rate: {details['shared_rate']}")
+        #print(f"  Order Preserved: {details['order_preserved']}")
         outfile.write(
-            "Read Accession: {0}\nShared Fragments: {1}\nOriginal: {2}\nOther: {3}\nShared Rate: {4}\n Order Preserved: {5}\n".format(read_acc,
+            "Read Accession: {0}\nShared Fragments: {1}\nOriginal: {2}\nOther: {3}\nShared Rate: {4}\n Order Preserved: {5}\n Undetected {6}\n missing {7}\n".format(read_acc,
                                                                                                          details[
                                                                                                              'shared_fragments'],
                                                                                                          details['fragments_1'],
@@ -228,10 +261,11 @@ def main(args):
                                                                                                          details[
                                                                                                              'shared_rate'],
                                                                                                          details[
-                                                                                                             'order_preserved']))
+                                                                                                             'order_preserved'],details['undetected'], missing_frag))
+    outfile.write("# reads fully preserved: {0} \n Overall Shared Rate: {1}".format(comparison_rust['fully_preserved_reads'],comparison_rust['overall_shared_rate']))
     print("\n # reads fully preserved:", comparison_rust['fully_preserved_reads'])
     print("\nOverall Shared Rate:", comparison_rust['overall_shared_rate'])
-    outfile.write("Overall Shared Rate:{0}\n".format( comparison_python['overall_shared_rate']))
+    #outfile.write("Overall Shared Rate:{0}\n".format( comparison_python['overall_shared_rate']))
     #print("Generating "+str(args.nr_reads)+" different reads")
     #isoforms=generate_isoforms(args, genome_out.name)
     #reads = generate_reads(args)
@@ -244,7 +278,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Simulate reads for our experiments")
     parser.add_argument('--read_infos', type=str,
                         help='Path to read infos file from simulation script')
-    parser.add_argument('--py_results', type=str, help='PAth to results file of python implementation')
+    #parser.add_argument('--py_results', type=str, help='PAth to results file of python implementation')
     parser.add_argument('--rs_results', type=str, help='PAth to results file of python implementation.')
     parser.add_argument('--outfile', type = str, help = 'path to and name of output file')
     args = parser.parse_args()

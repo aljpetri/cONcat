@@ -13,12 +13,20 @@ def simulate_reads(args, isoforms):
 
     reads = {}
     #different error rates we can add to our reads
+    #error_lvls =[1.0]  # 0% error rate
+    #error_lvls = [0.99] # 1% error rate
+    #error_lvls = [0.95] # 5% error rate
+    #error_lvls = [0.9] # 10% error rate
+    error_lvls = [0.85] # 15% error rate
+    #error_lvls = [0.8] # 20% error rate
+    #error_lvls = [0.75] # 25% error rate
+    #error_lvls= [0.7]  # 30% error rate
     #error_lvls = [0.6, 0.7, 0.8, 0.9, 0.92, 0.94, 0.96, 0.98, 0.99, 0.995]
     #error_lvls=[0.9,0.95,0.96,0.98,0.99,0.995]#3.94%error rate
     #error_lvls=[0.8, 0.875,0.9,0.92,0.96,0.98,0.99,0.995]#7%error rate
-    #error_lvls=[0.7]
-    #error_lvls=[0.97]
-    error_lvls =[1.0]
+    
+    
+    
     for i_acc, isoform in isoforms.items():
         read = []
         qual = []

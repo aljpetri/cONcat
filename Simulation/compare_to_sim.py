@@ -102,13 +102,15 @@ def get_missing_fragments_ordered(ref_dict, test_dict):
         test_list = [frag[0] for frag in test_dict[read_acc]]  # Copy lists to avoid modifying originals
         print("L1: {} \nL2:{}".format(ref_list,test_list))
         missing = []
+        pos_cter = 0
         for fragment in ref_list:
             if fragment in test_list:
                 found_ct += 1
                 test_list.remove(fragment)  # Remove first occurrence to respect repetition
             else:
                 missing_ct += 1
-                missing.append(fragment)  # If not in list2, it's missing
+                missing.append((fragment, pos_cter))  # If not in list2, it's missing
+            pos_cter+=1
         print("Missing {}\n".format(missing))
         if missing:
             missing_fragments[int(read_acc)] = missing  # Store ordered missing elements
@@ -145,7 +147,7 @@ def parse_rs_results(file_path):
                 raise ValueError(f"Unexpected number of fields in line: {line}")
 
             # Clean up and extract fields
-            read_acc = parts[0].strip().split("|")[-1]
+            read_acc = parts[0].strip().split("_")[-1]
             fragment_id = parts[1].strip()
             startpos = parts[2]
             endpos = parts[3]

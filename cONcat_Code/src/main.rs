@@ -2,14 +2,14 @@ mod side_functions;
 mod structs;
 
 use std::fs;
-use rayon::prelude::*;
+//use rayon::prelude::*;
 use csv::ReaderBuilder;
 use std::fs::File;
-use std::io::{BufRead, BufReader, BufWriter, Write};
+use std::io::{BufReader, BufWriter, Write};
 use std::path::{Path, PathBuf};
 use bio::io::fastq;
 use edlib_rs::edlibrs::*;
-use itertools::Itertools;
+//use itertools::Itertools;
 use rustc_hash::FxHashMap;
 use crate::side_functions::reverse_complement;
 use crate::structs::Interval;
@@ -110,7 +110,7 @@ fn add_bw_frags (expected_fragments_vec: &mut Vec<(String,String)>){
     let mut rev_comp_frags:Vec<(String,String)>=vec![];
     for fragment in expected_fragments_vec.iter() {
         let mut frag_name = fragment.0.clone();
-        let mut frag_seq = &fragment.1;
+        let frag_seq = &fragment.1;
         let rev_seq=frag_seq.chars().rev().collect::<String>();
         frag_name.push_str("_bw");
         let rc_frag=(frag_name,rev_seq.clone());
@@ -134,13 +134,13 @@ fn collect_sep_positions(sequence:&[u8], k:i32, expected_fragments_vec:&Vec<(Str
     // best_alignments stores the best hits for each fragment, so we do not have to recompute every alignment
     let mut best_results = vec![];
     let mut best_identity= 0f64;
-    let mut best_len= sequence.len();
+    //let mut best_len= sequence.len();
     let mut best_frag: &str = "";
-    let mut longest_frag= 0;
+    let longest_frag= 0;
     let mut best_start= 0;
     let mut best_end= 0;
     let mut best_frag_str= best_frag.to_string();
-    let mut best_alignment: Vec<u8> = vec![];
+    //let mut best_alignment: Vec<u8> = vec![];
     let mut best_dist= 1000;
     //for all fragments use edlib and get the best
     for fragment in expected_fragments_vec {
@@ -170,9 +170,9 @@ fn collect_sep_positions(sequence:&[u8], k:i32, expected_fragments_vec:&Vec<(Str
                     best_frag_str = best_frag.to_string();
                     best_dist = align_res.editDistance;
                     best_identity = this_identity;
-                    best_len = alignment_len;
+                    //best_len = alignment_len;
                     best_start = alignment_start;
-                    best_alignment = align_res.getAlignment().unwrap().clone();
+                    //best_alignment = align_res.getAlignment().unwrap().clone();
                     //println!("Best identity {}",best_identity);
                     best_end = *end_loc as usize;
                     let best_alignment_frag = (best_frag_str.clone(), best_dist, alignment_start, best_end);
@@ -254,7 +254,7 @@ fn main() {
     let outfolder= cli.outfolder;// ="/home/alexanderpetri/Project3/SimulationResults/first4_fastqs/Alex/outfile";
     let expected_fragments_filename= cli.expected;//"/home/alexanderpetri/Project3/Expected_fragments.csv";
     let verbose=cli.verbose;
-    let mut expected_fragments_vec: Vec<(String,String)> = vec![];
+    let mut expected_fragments_vec: Vec<(String,String)>;
     expected_fragments_vec = read_csv_to_map(expected_fragments_filename);
     //add_rev_comp_frags(&mut expected_fragments_vec); //comment this line out for current expected_fragments.csv
     //add_bw_frags(&mut expected_fragments_vec);
@@ -271,17 +271,17 @@ fn main() {
     let filename= cli.fastq;// "/home/alexanderpetri/Project3/Fastqs/1_first_4.fastq";
     let k_inter:f64 = long_fraglen as f64 * (1f64 / 1f64 - min_identity);
     let k= k_inter.ceil() as i32;
-    let mut frag_positions: Vec<(i32,i32,i32,String,usize,usize)>=vec![];
+    let mut frag_positions: Vec<(i32,i32,i32,String,usize,usize)>;
     let previous_frags: usize = 0;
     if verbose{
         println!("fragments range from {} to {} bp length", short_fraglen, long_fraglen);
 
     }
-    let mut reader = fastq::Reader::from_file(Path::new(&filename)).expect("We expect the file to exist");
+    let reader = fastq::Reader::from_file(Path::new(&filename)).expect("We expect the file to exist");
     let mut config = EdlibAlignConfigRs::default();
-    let mut range_end = 0;
-    let mut aligned_seg;
-    let mut this_pos= vec![];
+    let mut range_end;
+    //let mut aligned_seg;
+    let mut this_pos;
     //let mut outfile_hashmap = FxHashMap::default();
     let mut outfile_vector =vec![];
     config.mode = EdlibAlignModeRs::EDLIB_MODE_HW;
@@ -290,11 +290,11 @@ fn main() {
     //iterate over the reads in the fastq file
     for record in reader.records() {
         let mut covering_vec = vec![];
-        let mut prev_end = 0;
+        let prev_end = 0;
         let seq_rec = record.expect("invalid record");
         let header_new = seq_rec.id();
 
-        let mut sequence = seq_rec.seq();
+        let sequence = seq_rec.seq();
 
         let mut seq_cover_vec: Vec<Interval> = vec![];
         lendict.insert(header_new.to_string(), sequence.len());
@@ -338,7 +338,7 @@ fn main() {
                     println!("after: {:?}", covering_vec);
                 }
                 frag_pos_to_delete.push(frag_pos);
-                aligned_seg = std::str::from_utf8(&sequence[range_start..range_end]).unwrap();
+                //aligned_seg = std::str::from_utf8(&sequence[range_start..range_end]).unwrap();
                 let tmp_inter = Interval { start: range_start, end: range_end };
                 seq_cover_vec.push(tmp_inter);
 

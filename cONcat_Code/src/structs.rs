@@ -1,9 +1,3 @@
-use std::cmp::Ordering;
-
-
-
-
-
 //Interval represents an interval of a read that is covered by a fragment
 #[derive(Debug, PartialEq,Eq,Clone,PartialOrd,Ord)]
 pub struct Interval {

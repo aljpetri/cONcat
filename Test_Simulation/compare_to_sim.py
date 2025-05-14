@@ -174,12 +174,18 @@ def compare_fragment_dicts(reference_dict, tested_dict):
     """
     comparison_results = {}
     #shared_accessions = set(dict1.keys()) & set(dict2.keys())
+    print("Tested_dict",tested_dict)
+    print("Ref_dict",reference_dict)
     for read_acc in reference_dict.keys():
-        #print("Tested_dict",tested_dict)
+        
+        print(read_acc)
         list_of_ref_infos = reference_dict[read_acc]
         list1 = [elem[0] for elem in list_of_ref_infos]
-        list_of_test_infos = tested_dict[read_acc]
-        list2 = [elem[0] for elem in list_of_test_infos]
+        if read_acc in tested_dict.keys():
+            list_of_test_infos = tested_dict[read_acc]
+            list2 = [elem[0] for elem in list_of_test_infos]
+        else:
+            list2 = []
         # Calculate the set of shared fragments
         set1, set2 = set(list1), set(list2)
         shared_fragments = set1 & set2
@@ -239,6 +245,8 @@ def main(args):
     #comparison_python={}
     nr_frags_detected=0
     #comparison_python = compare_fragment_dicts(sim_info_dict, py_result_dict)
+    print("Tested_dict",sim_info_dict)
+    print("Ref_dict",rs_result_dict)
     comparison_rust = compare_fragment_dicts(sim_info_dict, rs_result_dict)
     missing_frags, missing_ct, found_ct, preserved_cter = get_missing_fragments_ordered(sim_info_dict, rs_result_dict)
     

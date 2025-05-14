@@ -8,7 +8,8 @@ import math
 
 #adds errors to the reads
 def simulate_reads(args, isoforms):
-    outfile = open(os.path.join(args.outfolder,"simulated.fastq"), "w")
+    of='simulated_'+str(args.error_lvl)+'_'+str(args.it)+'.fastq'
+    outfile = open(os.path.join(args.outfolder,of), "w")
     is_fastq = True
 
     reads = {}
@@ -17,7 +18,7 @@ def simulate_reads(args, isoforms):
     #error_lvls = [0.99] # 1% error rate
     #error_lvls = [0.95] # 5% error rate
     #error_lvls = [0.9] # 10% error rate
-    error_lvls = [0.85] # 15% error rate
+    #error_lvls = [0.85] # 15% error rate
     #error_lvls = [0.8] # 20% error rate
     #error_lvls = [0.75] # 25% error rate
     #error_lvls= [0.7]  # 30% error rate
@@ -26,7 +27,8 @@ def simulate_reads(args, isoforms):
     #error_lvls=[0.8, 0.875,0.9,0.92,0.96,0.98,0.99,0.995]#7%error rate
     
     
-    
+    error_lvls = [args.error_lvl]
+    print("ERROR",error_lvls)
     for i_acc, isoform in isoforms.items():
         read = []
         qual = []
@@ -127,8 +129,11 @@ def generate_reads(args):
     fragments_dict = read_fragments_csv_file(args.fragments)
     print(fragments_dict)
     max_nr = len(fragments_dict.items())-1
-    reads_out = open(os.path.join(args.outfolder, 'clean_reads.fasta'), "w")
-    read_infos = open(os.path.join(args.outfolder, 'readinfos.txt'), "w")
+    read_fn= 'clean_reads_'+str(args.error_lvl)+'_'+str(args.it)+'.fastq'
+    reads_out = open(os.path.join(args.outfolder, read_fn), "w")
+    infos_fn = 'readinfos_'+str(args.error_lvl)+'_'+str(args.it)+'.txt'
+    read_infos=open(os.path.join(args.outfolder, infos_fn),"w")
+    print("INFOS", infos_fn)
     reads = {}
     startpos=0
 
@@ -165,6 +170,8 @@ if __name__ == '__main__':
     parser.add_argument('--nr_reads', type=int, default=200, help='Number of reads we want to simulate')
     parser.add_argument('--outfolder', type=str, help='Outfolder.')
     parser.add_argument('--nr_frags_per_read', type = int, default = 10, help = 'Number of fragments we want to add to our read')
+    parser.add_argument('--error_lvl', type = float)
+    parser.add_argument('--it',type =int)
     args = parser.parse_args()
 
     if len(sys.argv) == 1:

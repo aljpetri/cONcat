@@ -1,0 +1,113 @@
+#Run the script by using the following: snakemake --cores 1 --configfile config.json
+#this snakemake pipeline is used to analyse the performance of isONform on Drosophila Data
+
+
+#The following variables represent the paths to the files required to run this pipeline
+
+###Script_input_folder: Equal to the folder the snakefile is located in. Should also contain all scripts needed for our analysis:
+#script_input_folder=config["SCRIPT_FOLDER"]
+fragments_csv = config["FRAG_CSV"]
+fragments_kris = config["FRAG_KRIS"]
+outfolder = config["OUTFOLDER"]
+#isonform_location=config["ISONFORM_LOCATION"]
+#isoform_abundance=config["ISO_ABUNDANCE"]
+#rattle_location=config["RATTLE_DIR"]
+shell.prefix("set -o pipefail; ")
+wildcard_constraints:
+    nr_reads="[\d]+",
+####################################################
+########## standard python functions ###############
+####################################################
+
+import re
+import os
+import errno
+import shutil
+import glob
+
+def mkdir_p(path):
+    print("creating", path)
+    try:
+        os.makedirs(path)
+    except OSError as exc:  # Python >2.5
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else:
+            raise
+
+rule all:
+	input:  expand(outfolder+"{mut}/{mut}.png", mut = config["NR_Mutations"]), expand(outfolder +'{mut}/fragments.png', mut = config["NR_Mutations"])
+
+
+###############################################################################################################################
+#                                                PREPROCESSING                                                                #
+###############################################################################################################################
+
+rule simulate_fragments:
+    output: outfolder+"{mut}/frag_{mut}.csv"      
+    run:
+        this_folder = lambda wildcards: outfolder + "{wildcards.mut}/"
+        shell("python sim_fragments.py {output} --mutations {wildcards.mut}")  
+
+rule get_frag_sims:
+    input:  outfolder+"{mut}/frag_{mut}.csv"
+    output: outfolder+"{mut}/{mut}.png"
+    run:
+        this_folder = outfolder + f"{wildcards.mut}/"
+        shell("python get_frag_similarity.py {input} --folder {this_folder} --name {wildcards.mut}")
+        
+            
+##Preprocessing:some of our tools have issues with the accessions- we shorten them here
+rule simulate_reads:
+    input: outfolder+"{mut}/frag_{mut}.csv" 
+    output: simulated_file = outfolder +"{mut}/simulated_{error_lvl}_{it}.fastq",
+            read_infos = outfolder +"{mut}/readinfos_{error_lvl}_{it}.txt"
+    run:
+        this_folder = outfolder + f"{wildcards.mut}/"
+        shell("python ~/LigatedDNA/Simulation/Simulate_reads.py --fragments {input} --nr_reads 1000 --outfolder {this_folder} --nr_frags_per_read 10 --error_lvl {wildcards.error_lvl} --it {wildcards.it}")
+        
+        
+rule run_rs_implementation_resources:
+    input:
+        simulated_file = outfolder +"{mut}/simulated_{error_lvl}_{it}.fastq"
+    output:
+        predictions = outfolder +"{mut}/fragments_{error_lvl}_{identity}_{it}.txt",
+        resources_log = outfolder +"{mut}/resources_{error_lvl}_{identity}_{it}.txt"
+    run:
+        this_folder = outfolder + f"{wildcards.mut}/"
+        outfile = outfolder  +f"{wildcards.mut}/fragments.txt"
+        shell("/usr/bin/time -v -o {output.resources_log} "
+              "~/LigatedDNA/cONcat_Code/target/release/cONcat "
+              "--expected {fragments_csv} "
+              "--fastq {input.simulated_file} "
+              "--outfolder {this_folder} "
+              "--identity-threshold {wildcards.identity}")
+        shell("mv {outfile} {output.predictions}")  
+              
+rule compare_to_ground_truth:
+    input: rust_result = outfolder +"{mut}/fragments_{error_lvl}_{identity}_{it}.txt",
+           ground_truth = outfolder +"{mut}/readinfos_{error_lvl}_{it}.txt"
+    output: 
+        outfolder +"{mut}/out_analysis_{error_lvl}_{identity}_{it}.txt"
+    run: 
+         shell("python compare_to_sim.py --read_infos {input.ground_truth}  --rs_results {input.rust_result} --outfile {output}")
+
+rule get_measures:
+    input: expand(outfolder +"{mut}/out_analysis_{error_lvl}_{identity}_{it}.txt",error_lvl = config["ERROR_LVLS"], identity = config["Identity"], it=config["ITS"], mut=config["NR_Mutations"])        
+    output: outfolder +'{mut}/run_summaries.csv'
+    run:
+        this_folder = outfolder + f"{wildcards.mut}/"
+        shell("python parse_analyses.py {outfolder}")
+        
+        
+rule plot_data:
+    input: outfolder +'{mut}/run_summaries.csv'
+    output: outfolder +'{mut}/fragments.png'
+    run:
+        this_folder = outfolder + f"{wildcards.mut}/"
+        shell("python plot_new.py {outfolder}")
+        
+                
+        
+        
+
